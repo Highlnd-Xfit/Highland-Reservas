@@ -1014,6 +1014,10 @@ tr:last-child td{border-bottom:none;}
 
   // ---------- anonymous feedback ----------
   var FEEDBACK_KEY = 'highland-feedback';
+  var GFORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSd-iGH-cvyqMSSFixPOHp0QQ3aOX7x5bAfQ4eCCUiHVrS1sHA/formResponse';
+  var GFORM_ENTRY_TYPE = 'entry.1874477494';
+  var GFORM_ENTRY_MSG = 'entry.175178688';
+
   el('fb-msg').addEventListener('input', function(){
     el('fb-count').textContent = this.value.length + ' / 100';
   });
@@ -1041,6 +1045,25 @@ tr:last-child td{border-bottom:none;}
       createdAt: new Date().toISOString()
     };
 
+    // Primary channel: Google Form → lands in your Google Sheet, works on any
+    // hosting (GitHub Pages included). "no-cors" means we can't read the
+    // response, but the submission still goes through.
+    try{
+      var body = new URLSearchParams();
+      body.append(GFORM_ENTRY_TYPE, entry.type);
+      body.append(GFORM_ENTRY_MSG, entry.message);
+      await fetch(GFORM_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+    }catch(e){
+      // best effort only
+    }
+
+    // Secondary channel: Claude's shared storage, in case this page is ever
+    // hosted back inside a published Claude artifact. Harmless no-op elsewhere.
     try{
       var res = await window.storage.get(FEEDBACK_KEY, true);
       var list = res ? JSON.parse(res.value) : [];
@@ -1048,7 +1071,7 @@ tr:last-child td{border-bottom:none;}
       list.push(entry);
       await window.storage.set(FEEDBACK_KEY, JSON.stringify(list), true);
     }catch(e){
-      // anonymous by design — if it fails, we still thank them, nothing to retry with here
+      // anonymous by design — if it fails, we still thank them
     }
 
     el('feedback-form-box').style.display = 'none';
